@@ -51,6 +51,7 @@ handlers = [
     (r"/api/task/info/(.*)", tasks.TaskInfo),
     (r"/api/task/apply/(.+)", tasks.TaskApply),
     (r"/api/task/async-apply/(.+)", tasks.TaskAsyncApply),
+    (r"/api/task/resubmit/(.+)", tasks.TaskResubmit),
     (r"/api/task/send-task/(.+)", tasks.TaskSend),
     (r"/api/task/result/(.+)", tasks.TaskResult),
     (r"/api/task/abort/(.+)", tasks.TaskAbort),

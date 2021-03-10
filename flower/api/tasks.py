@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 
@@ -19,6 +20,8 @@ from ..views import BaseHandler
 from ..utils.broker import Broker
 from ..api.control import ControlHandler
 from collections import OrderedDict
+
+from ..utils.tasks import get_task_by_id
 
 
 logger = logging.getLogger(__name__)
@@ -204,6 +207,69 @@ Execute a task
         args, kwargs, options = self.get_task_args()
         logger.debug("Invoking a task '%s' with '%s' and '%s'",
                      taskname, args, kwargs)
+
+        try:
+            task = self.capp.tasks[taskname]
+        except KeyError:
+            raise HTTPError(404, "Unknown task '%s'" % taskname)
+
+        try:
+            self.normalize_options(options)
+        except ValueError:
+            raise HTTPError(400, 'Invalid option')
+
+        result = task.apply_async(args=args, kwargs=kwargs, **options)
+        response = {'task-id': result.task_id}
+        if self.backend_configured(result):
+            response.update(state=result.state)
+        self.write(response)
+
+class TaskResubmit(BaseTaskHandler):
+
+    @web.authenticated
+    def post(self, taskid):
+        """
+Resubmit a task
+
+**Example request**:
+
+.. sourcecode:: http
+
+  POST /api/task/resubmit/abcd-1234 HTTP/1.1
+  Accept: application/json
+  Accept-Encoding: gzip, deflate, compress
+  Content-Length: 16
+  Content-Type: application/json; charset=utf-8
+  Host: localhost:5555
+
+  {
+  }
+
+**Example response**:
+
+.. sourcecode:: http
+
+  HTTP/1.1 200 OK
+  Content-Length: 71
+  Content-Type: application/json; charset=UTF-8
+  Date: Sun, 13 Apr 2014 15:55:00 GMT
+
+  {
+      "state": "PENDING",
+      "task-id": "abc300c7-2922-4069-97b6-a635cc2ac47c"
+  }
+
+:reqheader Authorization: optional OAuth token to authenticate
+:statuscode 200: no error
+:statuscode 401: unauthorized request
+:statuscode 404: unknown task
+        """
+        input_task = get_task_by_id(self.application.events, taskid)
+
+        args = ast.literal_eval(input_task.args)
+        kwargs = ast.literal_eval(input_task.kwargs)
+        taskname = input_task.name
+        options = {}
 
         try:
             task = self.capp.tasks[taskname]

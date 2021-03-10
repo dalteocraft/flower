@@ -347,6 +347,28 @@ var flower = (function () {
         });
     }
 
+    function on_task_resubmit(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        var taskid = $('#taskid').text();
+        var taskname = $('#taskname').text();
+
+        $.ajax({
+            type: 'POST',
+            url: url_prefix() + '/api/task/resubmit/' + taskid,
+            dataType: 'json',
+            data: {},
+            success: function (data) {
+                console.log(data);
+                show_success_alert(`Task ${taskname} ${data["task-id"]} submitted successfully. You can view task details here: <a href="/task/${data["task-id"]}">Task Details</a>`);
+            },
+            error: function (data) {
+                show_error_alert(data.responseText);
+            }
+        });
+    }
+
     function on_task_terminate(event) {
         event.preventDefault();
         event.stopPropagation();
@@ -673,6 +695,7 @@ var flower = (function () {
         on_task_rate_limit: on_task_rate_limit,
         on_cancel_task_filter: on_cancel_task_filter,
         on_task_revoke: on_task_revoke,
+        on_task_resubmit: on_task_resubmit,
         on_task_terminate: on_task_terminate,
     };
 
